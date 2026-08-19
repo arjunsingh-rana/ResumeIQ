@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResumeIQ - AI Resume Analyzer & ATS Optimizer</title>
+    <meta name="description" content="AI-powered resume analyzer that scores your resume for target roles, checks ATS compatibility, provides actionable bullet-point rewrites, and emails a detailed report.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Background Glowing Blobs -->
+    <div class="bg-glow blob-1"></div>
+    <div class="bg-glow blob-2"></div>
+    <div class="bg-glow blob-3"></div>
+
+    <!-- Navigation Header -->
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="brand">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-bolt-lightning"></i>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">Resume<span class="brand-highlight">IQ</span></span>
+                    <span class="brand-badge">AI Analyzer</span>
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <div class="status-chip" id="engineStatusChip">
+                    <span class="status-dot online"></span>
+                    <span id="engineStatusText">AI Engine Ready</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="openSettingsBtn" title="API Keys & SMTP Settings">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-container">
+        
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-badge">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 2026 AI-Powered ATS Resume Auditor
+            </div>
+            <h1 class="hero-title">
+                Land More Interviews with <span class="gradient-text">AI Precision</span>
+            </h1>
+            <p class="hero-subtitle">
+                Upload your resume (PDF), select your target role, and get instant 0-100 scoring, keyword gap detection, bullet-point rewrites, and an automated email report sent directly to your inbox.
+            </p>
+        </section>
+
+        <!-- Application Form Card -->
+        <section class="app-card" id="uploadSection">
+            <form id="analyzeForm" enctype="multipart/form-data">
+                
+                <!-- STEP 1: Select Target Role -->
+                <div class="form-step">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div>
+                            <h3 class="step-title">Select Target Job Role</h3>
+                            <p class="step-desc">AI evaluates your resume against industry benchmarks for this specific position.</p>
+                        </div>
+                    </div>
+
+                    <div class="role-grid" id="roleGrid">
+                        <label class="role-pill active">
+                            <input type="radio" name="target_role" value="Backend Developer" checked>
+                            <i class="fa-solid fa-server"></i>
+                            <span>Backend Developer</span>
+                        </label>
+                        <label class="role-pill">
+                            <input type="radio" name="target_role" value="Frontend Developer">
+                            <i class="fa-solid fa-code"></i>
+                            <span>Frontend Developer</span>
+                        </label>
+                        <label class="role-pill">
+                            <input type="radio" name="target_role" value="HR / Human Resources">
+                            <i class="fa-solid fa-users-gear"></i>
+                            <span>HR / Human Resources</span>
+                        </label>
+                        <label class="role-pill">
+                            <input type="radio" name="target_role" value="Full Stack Developer">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <span>Full Stack Developer</span>
+                        </label>
+                        <label class="role-pill">
+                            <input type="radio" name="target_role" value="Data Scientist / AI Engineer">
+                            <i class="fa-solid fa-brain"></i>
+                            <span>Data Scientist / AI</span>
+                        </label>
+                        <label class="role-pill">
+                            <input type="radio" name="target_role" value="General / Best Practices">
+                            <i class="fa-solid fa-briefcase"></i>
+                            <span>General / Best Practices</span>
+                        </label>
+                        <label class="role-pill" id="customRolePill">
+                            <input type="radio" name="target_role" value="Custom">
+                            <i class="fa-solid fa-pen-nib"></i>
+                            <span>Other (Custom)</span>
+                        </label>
+                    </div>
+
+                    <!-- Custom Role Input (Hidden by default) -->
+                    <div class="custom-role-container hidden" id="customRoleContainer">
+                        <label for="customRoleInput" class="input-label">Specify Your Target Role Title:</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fa-solid fa-briefcase input-icon"></i>
+                            <input type="text" id="customRoleInput" class="text-input" placeholder="e.g. Product Manager, DevOps Engineer, UX Designer...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Upload Resume -->
+                <div class="form-step">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-header-flex">
+                            <div>
+                                <h3 class="step-title">Upload Resume (PDF)</h3>
+                                <p class="step-desc">Securely extract text and analyze section structure.</p>
+                            </div>
+                            <div class="sample-loaders">
+                                <span class="sample-label">Quick Test Samples:</span>
+                                <button type="button" class="btn-sample" data-sample="backend">Backend Dev</button>
+                                <button type="button" class="btn-sample" data-sample="frontend">Frontend Dev</button>
+                                <button type="button" class="btn-sample" data-sample="hr">HR Manager</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mode Toggle: Upload vs Text -->
+                    <div class="tab-toggle">
+                        <button type="button" class="tab-btn active" id="tabUpload"><i class="fa-solid fa-file-pdf"></i> Upload PDF File</button>
+                        <button type="button" class="tab-btn" id="tabPaste"><i class="fa-solid fa-align-left"></i> Paste / Edit Resume Text</button>
+                    </div>
+
+                    <!-- PDF Upload Dropzone -->
+                    <div class="dropzone" id="pdfDropzone">
+                        <input type="file" id="resumeFileInput" name="resume" accept=".pdf,.txt" class="file-input-hidden">
+                        <div class="dropzone-content" id="dropzonePrompt">
+                            <div class="dropzone-icon">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <h4 class="dropzone-title">Drag & drop your resume PDF here</h4>
+                            <p class="dropzone-sub">or <span class="browse-link">browse from your computer</span></p>
+                            <span class="file-limits">Supports PDF, TXT (up to 16MB)</span>
+                        </div>
+
+                        <!-- Selected File Preview -->
+                        <div class="file-preview-card hidden" id="filePreviewCard">
+                            <div class="file-preview-icon">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </div>
+                            <div class="file-preview-info">
+                                <span class="file-preview-name" id="previewFileName">resume.pdf</span>
+                                <span class="file-preview-size" id="previewFileSize">142 KB</span>
+                            </div>
+                            <button type="button" class="btn-remove-file" id="removeFileBtn" title="Remove file">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Paste Text Area (Hidden by default) -->
+                    <div class="paste-area-container hidden" id="pasteAreaContainer">
+                        <textarea id="resumeTextInput" class="resume-textarea" placeholder="Paste your resume text here (Experience, Education, Skills, Projects)..."></textarea>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Email Delivery & Submit -->
+                <div class="form-step">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div>
+                            <h3 class="step-title">Automated Email Report (Optional)</h3>
+                            <p class="step-desc">Enter your email to automatically receive a beautifully formatted audit report.</p>
+                        </div>
+                    </div>
+
+                    <div class="email-input-row">
+                        <div class="input-icon-wrapper flex-grow">
+                            <i class="fa-solid fa-envelope input-icon"></i>
+                            <input type="email" id="candidateEmailInput" name="email" class="text-input" placeholder="e.g. yourname@gmail.com">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitAnalyzeBtn">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Analyze Resume Now</span>
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </section>
+
+        <!-- PROCESSING OVERLAY / PROGRESS INDICATOR -->
+        <section class="processing-card hidden" id="processingCard">
+            <div class="processing-glow"></div>
+            <div class="spinner-container">
+                <div class="pulse-ring"></div>
+                <div class="inner-icon">
+                    <i class="fa-solid fa-brain fa-beat"></i>
+                </div>
+            </div>
+
+            <h3 class="processing-title" id="processingTitle">Analyzing your resume...</h3>
+            <p class="processing-status" id="processingStatus">Extracting PDF text and parsing structural sections...</p>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <div class="processing-steps">
+                <div class="step-item active" id="pStep1">
+                    <i class="fa-solid fa-circle-check"></i> <span>Extract PDF</span>
+                </div>
+                <div class="step-item" id="pStep2">
+                    <i class="fa-solid fa-circle-check"></i> <span>Role Match</span>
+                </div>
+                <div class="step-item" id="pStep3">
+                    <i class="fa-solid fa-circle-check"></i> <span>ATS Keywords</span>
+                </div>
+                <div class="step-item" id="pStep4">
+                    <i class="fa-solid fa-circle-check"></i> <span>Score & Rewrites</span>
+                </div>
+                <div class="step-item" id="pStep5">
+                    <i class="fa-solid fa-circle-check"></i> <span>Email Delivery</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- RESULTS DASHBOARD -->
+        <section class="results-dashboard hidden" id="resultsSection">
+            
+            <!-- Result Banner / Notification -->
+            <div class="email-banner" id="emailStatusBanner">
+                <div class="banner-icon">
+                    <i class="fa-solid fa-envelope-circle-check"></i>
+                </div>
+                <div class="banner-content">
+                    <h4 class="banner-title" id="emailBannerTitle">Report Ready</h4>
+                    <p class="banner-msg" id="emailBannerMsg">Your resume analysis is complete!</p>
+                </div>
+                <div class="banner-actions">
+                    <button class="btn btn-sm btn-outline-white" id="previewEmailBtn">
+                        <i class="fa-solid fa-eye"></i> View Email Preview
+                    </button>
+                </div>
+            </div>
+
+            <!-- Top Score Overview Grid -->
+            <div class="results-grid">
+                
+                <!-- Main Circular Score Card -->
+                <div class="card score-hero-card">
+                    <div class="card-header-simple">
+                        <span class="card-tag">Target Role: <strong id="resTargetRole">Backend Developer</strong></span>
+                        <span class="engine-badge" id="resEngineUsed">GPT-4o-mini</span>
+                    </div>
+
+                    <div class="score-circle-wrapper">
+                        <svg class="score-svg" viewBox="0 0 160 160">
+                            <circle class="score-circle-bg" cx="80" cy="80" r="70"></circle>
+                            <circle class="score-circle-progress" id="scoreCircleProgress" cx="80" cy="80" r="70"></circle>
+                        </svg>
+                        <div class="score-number-box">
+                            <span class="score-val" id="resOverallScore">0</span>
+                            <span class="score-max">/ 100</span>
+                        </div>
+                    </div>
+
+                    <div class="score-grade-badge" id="resScoreGrade">Strong Match</div>
+                    <p class="score-sub-caption">Overall Candidate Market Readiness</p>
+                </div>
+
+                <!-- Sub-Scores Breakdown -->
+                <div class="card subscores-card">
+                    <h3 class="card-heading"><i class="fa-solid fa-chart-simple"></i> Evaluation Breakdown</h3>
+                    
+                    <div class="subscore-list">
+                        <!-- ATS Score -->
+                        <div class="subscore-item">
+                            <div class="subscore-header">
+                                <span class="subscore-title"><i class="fa-solid fa-robot"></i> ATS Compatibility</span>
+                                <span class="subscore-val" id="resAtsScore">0%</span>
+                            </div>
+                            <div class="meter-bar">
+                                <div class="meter-fill fill-emerald" id="meterAts" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Technical Skills -->
+                        <div class="subscore-item">
+                            <div class="subscore-header">
+                                <span class="subscore-title"><i class="fa-solid fa-code"></i> Technical & Role Alignment</span>
+                                <span class="subscore-val" id="resTechScore">0%</span>
+                            </div>
+                            <div class="meter-bar">
+                                <div class="meter-fill fill-indigo" id="meterTech" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Impact & Metrics -->
+                        <div class="subscore-item">
+                            <div class="subscore-header">
+                                <span class="subscore-title"><i class="fa-solid fa-arrow-trend-up"></i> Quantifiable Impact & Metrics</span>
+                                <span class="subscore-val" id="resImpactScore">0%</span>
+                            </div>
+                            <div class="meter-bar">
+                                <div class="meter-fill fill-blue" id="meterImpact" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Structure & Formatting -->
+                        <div class="subscore-item">
+                            <div class="subscore-header">
+                                <span class="subscore-title"><i class="fa-solid fa-file-lines"></i> Structure & Formatting</span>
+                                <span class="subscore-val" id="resFormatScore">0%</span>
+                            </div>
+                            <div class="meter-bar">
+                                <div class="meter-fill fill-purple" id="meterFormat" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Executive Summary Card -->
+            <div class="card summary-card">
+                <div class="summary-header">
+                    <i class="fa-solid fa-quote-left summary-icon"></i>
+                    <h3 class="card-heading">Executive AI Assessment</h3>
+                </div>
+                <p class="summary-text" id="resSummaryText">...</p>
+            </div>
+
+            <!-- Detailed Breakdown Columns -->
+            <div class="two-col-grid">
+                
+                <!-- LEFT COLUMN: Strengths & Improvements -->
+                <div class="col-stack">
+                    
+                    <!-- Key Strengths -->
+                    <div class="card strengths-card">
+                        <h3 class="card-heading text-emerald"><i class="fa-solid fa-circle-check"></i> Key Strengths</h3>
+                        <div class="strengths-list" id="resStrengthsList">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Actionable Improvements -->
+                    <div class="card improvements-card">
+                        <h3 class="card-heading text-indigo"><i class="fa-solid fa-screwdriver-wrench"></i> Actionable Improvements</h3>
+                        <div class="improvements-list" id="resImprovementsList">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT COLUMN: Keywords, ATS & Missing Sections -->
+                <div class="col-stack">
+                    
+                    <!-- Missing Role Keywords -->
+                    <div class="card keywords-card">
+                        <div class="keywords-header">
+                            <h3 class="card-heading text-rose"><i class="fa-solid fa-triangle-exclamation"></i> Missing High-Impact Keywords</h3>
+                            <span class="tag-badge">Add to Resume</span>
+                        </div>
+                        <p class="card-sub-hint">These target keywords were not detected in your resume text:</p>
+                        <div class="tags-cloud" id="resMissingKeywords">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- ATS Scanner Feedback -->
+                    <div class="card ats-card">
+                        <div class="ats-header">
+                            <h3 class="card-heading"><i class="fa-solid fa-shield-halved"></i> ATS Readability Report</h3>
+                            <span class="verdict-pill" id="resAtsVerdict">Pass</span>
+                        </div>
+                        <p class="ats-density-text" id="resAtsDensity">...</p>
+                        <div class="ats-tips-box">
+                            <h4 class="tips-heading">ATS Optimization Recommendations:</h4>
+                            <ul class="tips-list" id="resAtsTips">
+                                <!-- Injected dynamically -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Missing Sections Card -->
+                    <div class="card missing-sec-card">
+                        <h3 class="card-heading text-amber"><i class="fa-solid fa-puzzle-piece"></i> Missing / Incomplete Sections</h3>
+                        <ul class="missing-sections-list" id="resMissingSections">
+                            <!-- Injected dynamically -->
+                        </ul>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Bullet Point Rewrites Section -->
+            <div class="card rewrites-card">
+                <div class="rewrites-header">
+                    <div>
+                        <h3 class="card-heading"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Bullet-Point Enhancements</h3>
+                        <p class="card-sub-hint">Transforms generic duties into high-converting XYZ-formula achievements (Accomplished [X] measured by [Y] by doing [Z]).</p>
+                    </div>
+                </div>
+                <div class="rewrites-list" id="resRewritesList">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+
+            <!-- Final Recommendation Banner -->
+            <div class="final-recommendation-card">
+                <div class="rec-icon">
+                    <i class="fa-solid fa-rocket"></i>
+                </div>
+                <div class="rec-content">
+                    <h3 class="rec-title">Next Steps & Recommendation</h3>
+                    <p class="rec-text" id="resFinalRec">...</p>
+                </div>
+            </div>
+
+            <!-- Bottom Floating Action Bar -->
+            <div class="bottom-action-bar">
+                <button class="btn btn-secondary" id="resendEmailBtn">
+                    <i class="fa-solid fa-paper-plane"></i> Send to Email
+                </button>
+                <button class="btn btn-secondary" id="printReportBtn">
+                    <i class="fa-solid fa-print"></i> Print / Export PDF
+                </button>
+                <button class="btn btn-primary" id="analyzeAnotherBtn">
+                    <i class="fa-solid fa-rotate-left"></i> Analyze Another Resume
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- SETTINGS / API KEYS MODAL -->
+    <div class="modal-backdrop hidden" id="settingsModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fa-solid fa-sliders"></i> Configuration & Integrations</h3>
+                <button class="modal-close" id="closeSettingsBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-intro">
+                    ResumeIQ works automatically with a <strong>built-in intelligent local engine</strong>. You can optionally connect live OpenAI, Gemini, or Gmail SMTP for live delivery.
+                </p>
+
+                <!-- OpenAI Key -->
+                <div class="config-group">
+                    <label class="config-label" for="settingOpenaiKey">
+                        <i class="fa-solid fa-key"></i> OpenAI API Key
+                    </label>
+                    <input type="password" id="settingOpenaiKey" class="text-input" placeholder="sk-...">
+                    <span class="config-help">Uses GPT-4o-mini for instant resume evaluation.</span>
+                </div>
+
+                <!-- Gemini Key -->
+                <div class="config-group">
+                    <label class="config-label" for="settingGeminiKey">
+                        <i class="fa-solid fa-brain"></i> Google Gemini API Key (Alternative)
+                    </label>
+                    <input type="password" id="settingGeminiKey" class="text-input" placeholder="AIzaSy...">
+                </div>
+
+                <hr class="modal-divider">
+
+                <h4 class="config-section-title"><i class="fa-solid fa-envelope"></i> Gmail SMTP Automation</h4>
+                <div class="config-group">
+                    <label class="config-label" for="settingSmtpEmail">Gmail Address</label>
+                    <input type="email" id="settingSmtpEmail" class="text-input" placeholder="yourname@gmail.com">
+                </div>
+
+                <div class="config-group">
+                    <label class="config-label" for="settingSmtpPass">Gmail App Password (16 Characters)</label>
+                    <input type="password" id="settingSmtpPass" class="text-input" placeholder="xxxx xxxx xxxx xxxx">
+                    <span class="config-help">Generate under Google Account &rarr; Security &rarr; 2-Step Verification &rarr; App Passwords.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveSettingsBtn"><i class="fa-solid fa-check"></i> Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EMAIL PREVIEW MODAL -->
+    <div class="modal-backdrop hidden" id="emailPreviewModal">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fa-solid fa-envelope-open-text"></i> Email Report Preview</h3>
+                <button class="modal-close" id="closeEmailPreviewBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body email-preview-body">
+                <iframe id="emailPreviewFrame" class="email-preview-frame"></iframe>
+            </div>
+            <div class="modal-footer">
+                <div class="email-send-inline">
+                    <input type="email" id="quickSendEmailInput" class="text-input" placeholder="Enter recipient email...">
+                    <button class="btn btn-primary btn-sm" id="quickSendEmailBtn"><i class="fa-solid fa-paper-plane"></i> Send Now</button>
+                </div>
+                <button class="btn btn-secondary" id="closeEmailPreviewFooterBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Custom JavaScript -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
