@@ -5,6 +5,7 @@ Main Flask Application Server
 import os
 import io
 import json
+import base64
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -89,31 +90,42 @@ def analyze():
     Accepts PDF file, target role, candidate email, and returns structured AI report.
     """
     try:
-        if 'resume' not in request.files and 'text' not in request.form:
+        # Check inputs: pdf_base64, multipart file 'resume', or raw 'text'
+        has_base64 = bool(request.form.get('pdf_base64') or (request.is_json and request.json.get('pdf_base64')))
+        has_file = 'resume' in request.files
+        has_text = bool(request.form.get('text', '').strip() or (request.is_json and request.json.get('text', '').strip()))
+
+        if not (has_base64 or has_file or has_text):
             return jsonify({"success": False, "error": "Please upload a resume PDF file or provide text."}), 400
 
-        target_role = request.form.get('role', 'General / Best Practices')
-        custom_role = request.form.get('custom_role', '').strip()
-        candidate_email = request.form.get('email', '').strip()
-        api_key_override = request.form.get('api_key', '').strip() or None
+        target_role = request.form.get('role') or (request.json.get('role') if request.is_json else 'General / Best Practices') or 'General / Best Practices'
+        custom_role = (request.form.get('custom_role') or (request.json.get('custom_role') if request.is_json else '') or '').strip()
+        candidate_email = (request.form.get('email') or (request.json.get('email') if request.is_json else '') or '').strip()
+        api_key_override = (request.form.get('api_key') or (request.json.get('api_key') if request.is_json else '') or '').strip() or None
 
         # Extract text
-        if 'resume' in request.files:
+        if has_base64:
+            b64_data = request.form.get('pdf_base64') or request.json.get('pdf_base64')
+            if ',' in b64_data:
+                b64_data = b64_data.split(',', 1)[1]
+            file_bytes = base64.b64decode(b64_data)
+            pdf_meta = extract_text_from_pdf(file_bytes)
+            if not pdf_meta["success"]:
+                return jsonify({"success": False, "error": pdf_meta["error"]}), 400
+            resume_text = pdf_meta["text"]
+        elif has_file:
             file = request.files['resume']
             if not file.filename.lower().endswith(('.pdf', '.txt')):
                 return jsonify({"success": False, "error": "Only PDF or TXT files are supported."}), 400
-            
-            # Read content bytes safely
             file_bytes = file.read()
             if not file_bytes:
                 return jsonify({"success": False, "error": "The uploaded file appears to be empty."}), 400
-                
             pdf_meta = extract_text_from_pdf(file_bytes)
             if not pdf_meta["success"]:
                 return jsonify({"success": False, "error": pdf_meta["error"]}), 400
             resume_text = pdf_meta["text"]
         else:
-            resume_text = request.form.get('text', '').strip()
+            resume_text = (request.form.get('text') or request.json.get('text', '')).strip()
             pdf_meta = {
                 "page_count": 1,
                 "word_count": len(resume_text.split()),

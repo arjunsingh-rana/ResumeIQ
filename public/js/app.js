@@ -269,7 +269,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (activeMode === 'upload') {
-            formData.append('resume', selectedFile);
+            try {
+                const base64Data = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(selectedFile);
+                });
+                formData.append('pdf_base64', base64Data);
+            } catch (err) {
+                formData.append('resume', selectedFile);
+            }
         } else {
             formData.append('text', resumeTextInput.value.trim());
         }
