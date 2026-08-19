@@ -16,7 +16,12 @@ from services.email_service import send_resume_report_email, generate_email_html
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
+# Ensure template and static directories resolve correctly in serverless / local environments
+base_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(base_dir, 'templates')
+static_dir = os.path.join(base_dir, 'static')
+
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 CORS(app)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB Max Upload
 
