@@ -88,82 +88,104 @@ def analyze():
     Main analysis endpoint.
     Accepts PDF file, target role, candidate email, and returns structured AI report.
     """
-    if 'resume' not in request.files and 'text' not in request.form:
-        return jsonify({"success": False, "error": "Please upload a resume PDF file or provide text."}), 400
+    try:
+        if 'resume' not in request.files and 'text' not in request.form:
+            return jsonify({"success": False, "error": "Please upload a resume PDF file or provide text."}), 400
 
-    target_role = request.form.get('role', 'General / Best Practices')
-    custom_role = request.form.get('custom_role', '').strip()
-    candidate_email = request.form.get('email', '').strip()
-    api_key_override = request.form.get('api_key', '').strip() or None
+        target_role = request.form.get('role', 'General / Best Practices')
+        custom_role = request.form.get('custom_role', '').strip()
+        candidate_email = request.form.get('email', '').strip()
+        api_key_override = request.form.get('api_key', '').strip() or None
 
-    # Extract text
-    if 'resume' in request.files:
-        file = request.files['resume']
-        if not file.filename.lower().endswith(('.pdf', '.txt')):
-            return jsonify({"success": False, "error": "Only PDF or TXT files are supported."}), 400
-        
-        pdf_meta = extract_text_from_pdf(file)
-        if not pdf_meta["success"]:
-            return jsonify({"success": False, "error": pdf_meta["error"]}), 400
-        resume_text = pdf_meta["text"]
-    else:
-        resume_text = request.form.get('text', '').strip()
-        pdf_meta = {
-            "page_count": 1,
-            "word_count": len(resume_text.split()),
-            "detected_sections": [],
-            "detected_email": None,
-            "detected_phone": None,
-            "preview_snippet": resume_text[:300]
-        }
+        # Extract text
+        if 'resume' in request.files:
+            file = request.files['resume']
+            if not file.filename.lower().endswith(('.pdf', '.txt')):
+                return jsonify({"success": False, "error": "Only PDF or TXT files are supported."}), 400
+            
+            # Read content bytes safely
+            file_bytes = file.read()
+            if not file_bytes:
+                return jsonify({"success": False, "error": "The uploaded file appears to be empty."}), 400
+                
+            pdf_meta = extract_text_from_pdf(file_bytes)
+            if not pdf_meta["success"]:
+                return jsonify({"success": False, "error": pdf_meta["error"]}), 400
+            resume_text = pdf_meta["text"]
+        else:
+            resume_text = request.form.get('text', '').strip()
+            pdf_meta = {
+                "page_count": 1,
+                "word_count": len(resume_text.split()),
+                "detected_sections": [],
+                "detected_email": None,
+                "detected_phone": None,
+                "preview_snippet": resume_text[:300]
+            }
 
-    if len(resume_text.strip()) < 50:
+        if len(resume_text.strip()) < 50:
+            return jsonify({
+                "success": False,
+                "error": "The resume text is too short or could not be extracted. Please upload a clear PDF with selectable text."
+            }), 400
+
+        # Auto-detect email if not provided by user
+        if not candidate_email and pdf_meta.get("detected_email"):
+            candidate_email = pdf_meta["detected_email"]
+
+        # Run AI analysis
+        analysis_result = analyze_resume(
+            resume_text=resume_text,
+            target_role=target_role,
+            custom_role=custom_role,
+            api_key_override=api_key_override
+        )
+
+        # Email automation if candidate email provided
+        email_delivery_result = None
+        if candidate_email:
+            try:
+                email_delivery_result = send_resume_report_email(
+                    recipient_email=candidate_email,
+                    report_data=analysis_result
+                )
+            except Exception as email_err:
+                html_preview = generate_email_html(analysis_result, candidate_email)
+                email_delivery_result = {
+                    "sent": False,
+                    "simulated": True,
+                    "recipient": candidate_email,
+                    "message": f"Email could not be dispatched: {str(email_err)}",
+                    "rendered_html": html_preview
+                }
+        else:
+            # Generate HTML preview for UI
+            html_preview = generate_email_html(analysis_result, "candidate@example.com")
+            email_delivery_result = {
+                "sent": False,
+                "simulated": True,
+                "recipient": None,
+                "message": "Enter your email above to have the full report automatically sent to your inbox.",
+                "rendered_html": html_preview
+            }
+
+        return jsonify({
+            "success": True,
+            "meta": {
+                "page_count": pdf_meta.get("page_count", 1),
+                "word_count": pdf_meta.get("word_count", 0),
+                "detected_sections": pdf_meta.get("detected_sections", []),
+                "candidate_email": candidate_email
+            },
+            "report": analysis_result,
+            "email_delivery": email_delivery_result
+        })
+
+    except Exception as e:
         return jsonify({
             "success": False,
-            "error": "The resume text is too short or could not be extracted. Please upload a clear PDF with selectable text."
-        }), 400
-
-    # Auto-detect email if not provided by user
-    if not candidate_email and pdf_meta.get("detected_email"):
-        candidate_email = pdf_meta["detected_email"]
-
-    # Run AI analysis
-    analysis_result = analyze_resume(
-        resume_text=resume_text,
-        target_role=target_role,
-        custom_role=custom_role,
-        api_key_override=api_key_override
-    )
-
-    # Email automation if candidate email provided
-    email_delivery_result = None
-    if candidate_email:
-        email_delivery_result = send_resume_report_email(
-            recipient_email=candidate_email,
-            report_data=analysis_result
-        )
-    else:
-        # Generate HTML preview for UI
-        html_preview = generate_email_html(analysis_result, "candidate@example.com")
-        email_delivery_result = {
-            "sent": False,
-            "simulated": True,
-            "recipient": None,
-            "message": "Enter your email above to have the full report automatically sent to your inbox.",
-            "rendered_html": html_preview
-        }
-
-    return jsonify({
-        "success": True,
-        "meta": {
-            "page_count": pdf_meta.get("page_count", 1),
-            "word_count": pdf_meta.get("word_count", 0),
-            "detected_sections": pdf_meta.get("detected_sections", []),
-            "candidate_email": candidate_email
-        },
-        "report": analysis_result,
-        "email_delivery": email_delivery_result
-    })
+            "error": f"An error occurred while processing the resume: {str(e)}"
+        }), 500
 
 
 @app.route('/api/send-email', methods=['POST'])
