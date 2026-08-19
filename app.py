@@ -98,7 +98,18 @@ def analyze():
         has_file = 'resume' in request.files
 
         if not (pdf_base64 or has_file or raw_text):
-            return jsonify({"success": False, "error": "Please upload a resume PDF file or provide text."}), 400
+            return jsonify({
+                "success": False,
+                "error": "Please upload a resume PDF file or provide text.",
+                "debug": {
+                    "is_json": request.is_json,
+                    "content_type": request.content_type,
+                    "form_keys": list(request.form.keys()),
+                    "files_keys": list(request.files.keys()),
+                    "json_keys": list(json_data.keys()),
+                    "body_length": len(request.get_data(as_text=False))
+                }
+            }), 400
 
         target_role = form_data.get('role') or json_data.get('role') or 'General / Best Practices'
         custom_role = (form_data.get('custom_role') or json_data.get('custom_role') or '').strip()
