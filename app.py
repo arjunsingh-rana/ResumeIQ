@@ -90,22 +90,24 @@ def analyze():
     Accepts PDF file, target role, candidate email, and returns structured AI report.
     """
     try:
-        # Check inputs: pdf_base64, multipart file 'resume', or raw 'text'
-        has_base64 = bool(request.form.get('pdf_base64') or (request.is_json and request.json.get('pdf_base64')))
-        has_file = 'resume' in request.files
-        has_text = bool(request.form.get('text', '').strip() or (request.is_json and request.json.get('text', '').strip()))
+        json_data = request.get_json(silent=True) or {}
+        form_data = request.form or {}
 
-        if not (has_base64 or has_file or has_text):
+        pdf_base64 = form_data.get('pdf_base64') or json_data.get('pdf_base64')
+        raw_text = (form_data.get('text') or json_data.get('text') or '').strip()
+        has_file = 'resume' in request.files
+
+        if not (pdf_base64 or has_file or raw_text):
             return jsonify({"success": False, "error": "Please upload a resume PDF file or provide text."}), 400
 
-        target_role = request.form.get('role') or (request.json.get('role') if request.is_json else 'General / Best Practices') or 'General / Best Practices'
-        custom_role = (request.form.get('custom_role') or (request.json.get('custom_role') if request.is_json else '') or '').strip()
-        candidate_email = (request.form.get('email') or (request.json.get('email') if request.is_json else '') or '').strip()
-        api_key_override = (request.form.get('api_key') or (request.json.get('api_key') if request.is_json else '') or '').strip() or None
+        target_role = form_data.get('role') or json_data.get('role') or 'General / Best Practices'
+        custom_role = (form_data.get('custom_role') or json_data.get('custom_role') or '').strip()
+        candidate_email = (form_data.get('email') or json_data.get('email') or '').strip()
+        api_key_override = (form_data.get('api_key') or json_data.get('api_key') or '').strip() or None
 
         # Extract text
-        if has_base64:
-            b64_data = request.form.get('pdf_base64') or request.json.get('pdf_base64')
+        if pdf_base64:
+            b64_data = pdf_base64
             if ',' in b64_data:
                 b64_data = b64_data.split(',', 1)[1]
             file_bytes = base64.b64decode(b64_data)
@@ -125,7 +127,7 @@ def analyze():
                 return jsonify({"success": False, "error": pdf_meta["error"]}), 400
             resume_text = pdf_meta["text"]
         else:
-            resume_text = (request.form.get('text') or request.json.get('text', '')).strip()
+            resume_text = raw_text
             pdf_meta = {
                 "page_count": 1,
                 "word_count": len(resume_text.split()),
