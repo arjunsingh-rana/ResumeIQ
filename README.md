@@ -4,6 +4,10 @@ A production-ready full-stack **Python** application for automated resume parsin
 
 Built 100% in Python (Flask + Modern Vanilla CSS/HTML/JS) — completely independent of external platforms like Replit.
 
+🌐 **Live Demo on Vercel:** [https://resume-iq-pink-six.vercel.app/](https://resume-iq-pink-six.vercel.app/)
+
+![ResumeIQ Home](assets/resumeiq-home.png)
+
 ---
 
 ## ✨ Features
